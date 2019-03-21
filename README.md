@@ -21,7 +21,7 @@ An attempt to add type system to Wolfram Language.
 ## Design Patterns
 
 There are several possible design patterns to introduce type system into Wolfram
-Language. The current code only provides the Head-based solution based on the
+Language. The current code only provides the head-based solution based on the
 type system implemented in [WolframLanguageServer](https://github.com/kenkangxgwe/lsp-wl).
 
 ### Head-based
@@ -96,7 +96,7 @@ stu1["sex"] (* === "Male" *)
 
 Although multiple paradigms are supported in Wolfram Language, we prefer to make
 our data immutable, by this meaning, we need to construct a new instance in
-order to change the value in the field. We may simply archieve this by using
+order to change the value in the field. We may simply achieve this by using
 `ReplaceKey`.
 
 ```Mathematica
@@ -135,4 +135,5 @@ stuWithWrongField["salary"] (* === Missing["KeyAbsent", "salary"] *)
 - [ ] Implement basic framework for type definition and checking.
 - [ ] Introduce subtypes and interfaces.
 - [ ] Static type checking and code generation.
+
 ...
