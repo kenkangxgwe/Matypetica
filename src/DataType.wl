@@ -4,20 +4,22 @@
 (* Author: kenkangxgwe <kenkangxgwe_at_gmail.com> *)
 
 
-BeginPackage["DataType`"];
-ClearAll[Evaluate[Context[] <> "*"]];
+BeginPackage["DataType`"]
+ClearAll[Evaluate[Context[] <> "*"]]
 
 
 DeclareType::usage = "DeclareType[typename, <|key_String -> pattern...|>] declares a type given by its name and an association indicating every field and its pattern in the type. \
 typename[key] gets access to the corresponding value. \
-typename[key, default] gets access to the corresponding value. If it is missing, returns the default.";
+typename[key, default] gets access to the corresponding value. If it is missing, returns the default."
 ConstructType::usage = "ConstructType[params_Association, type] constructs an object of the given type with specified params."
 TypeUsage::usage = "TypeUsage[type, usage_String] append usage to current type."
-Keys::usage = Keys::usage <> "\nKeys[typename] gives a list of the keys field_i in type typename.";
-KeyPatterns::usage = "KeyPatterns[typename] returns the key-pattern pair of the type.";
+Keys::usage = Keys::usage <> "\nKeys[typename] gives a list of the keys field_i in type typename."
+KeyPatterns::usage = "KeyPatterns[typename] returns the key-pattern pair of the type."
 ReplaceKey::usage = "ReplaceKey[object, key -> value] assigns the value to key in given object.
 ReplaceKey[object, {key1, key2} -> value] assigns the value to object[key1][key2].
-Replacekey[replaceRule_Rule] is an operator that can be applied to an object.";
+Replacekey[replaceRule_Rule] is an operator that can be applied to an object."
+TypeCheckOn::usage = "TypeCheckOn[] turns on type checking."
+TypeCheckOff::usage = "TypeCheckOff[] turns off type checking."
 
 
 (* ::Section:: *)
@@ -27,6 +29,7 @@ Replacekey[replaceRule_Rule] is an operator that can be applied to an object.";
 DeclareType[typename_Symbol, typekey:<|(_String -> _)...|>] := Module[
 	{
 	},
+
 	(* Getter *)
 	typename[typedict_Association][key_String] := TypeCheck[typedict[key], typekey[key]];
 	typename[typedict_Association][key_String, default_] := With[
@@ -49,10 +52,8 @@ DeclareType[typename_Symbol, typekey:<|(_String -> _)...|>] := Module[
 	KeyPatterns[typename] = typekey;
 	
 	(* ReplaceKey *)
-	ReplaceKey[typename[typedict_Association], key_String -> value_] :=
-		ReplaceKey[typename[typedict], {key} -> value];
-	ReplaceKey[typename[typedict_Association], {key_String, keys___} -> value_] := 
-		typename[Append[typedict, key -> ReplaceKey[typedict[key], {keys} -> value]]];
+	ReplaceKey[typename[typedict_Association], rule:((Rule|RuleDelayed)[(_String|{_String, ___}), _])] :=
+		typename[ReplaceKey[typedict, rule]];
 	
 	(* SameQ *)
 	typename /: SameQ[typename[typedict1_Association], typename[typedict2_Association]] := (
@@ -67,7 +68,7 @@ DeclareType[typename_Symbol, typekey:<|(_String -> _)...|>] := Module[
 	    "|>]",
 	    Replace[Evaluate[typename]::usage, _MessageName -> "."]
 	}];
-];
+]
 
 
 Begin["`Private`"]
@@ -84,28 +85,29 @@ ConstructType[parameters_, pattern_] := If[MatchQ[parameters, pattern], paramete
         Verbatim[Blank][h_] :> ConstructType[parameters, h],
         _ :> Missing["ConstructorNotFound", {parameters, pattern}]
     }]
-];
+]
 
 ConstructType[parameters_, pattern:Verbatim[Alternatives][ps__]] := (
     ConstructTypeAlternatives[parameters, {{ps}, Missing["ConstructorNotFound", {parameters, pattern}]}]
-);
+)
 
-ConstructTypeAlternatives[parameters_, {{}, res_}] := res;
-ConstructTypeAlternatives[parameters_, {{p_, ps___}, res_}] := ConstructTypeAlternatives[parameters,
+ConstructTypeAlternatives[parameters_, {{}, res_}] := res
+ConstructTypeAlternatives[parameters_, {{p_, ps___}, res_}] := ConstructTypeAlternatives[
+    parameters,
     ConstructType[parameters, p]
     // Replace[{
         _Missing :> {{ps}, res},
         newres_ :> {{}, newres}
     }]
-];
+]
 
 ConstructType[parameters_List, pattern:List[(Verbatim[Repeated]|Verbatim[RepeatedNull])[p_]]] := (
     ConstructTypeList[p, {parameters, {}}] // Replace[_Missing :> Missing["ConstructorNotFound", {parameters, pattern}]]
-);
+)
 
 ConstructType[parameters_List, pattern:List[(Verbatim[BlankSequence]|Verbatim[BlankNullSequence])[p_]]] := (
     ConstructTypeList[_p, {parameters, {}}] // Replace[_Missing :> Missing["ConstructorNotFound", {parameters, pattern}]]
-);
+)
 
 ConstructTypeList[p_, {{}, res_}] := res;
 ConstructTypeList[p_, {{param_, params___}, res_}] := ConstructTypeList[p, 
@@ -114,7 +116,7 @@ ConstructTypeList[p_, {{param_, params___}, res_}] := ConstructTypeList[p,
         _Missing :>  {{}, MissingQ["ConstructorNotFound"]},
         curRes_ :> {{params}, Append[res, curRes]}
     }]
-];
+]
 
 ConstructType[parameters_Association, pattern:Association[(Verbatim[Repeated]|Verbatim[RepeatedNull])[Rule[key_, val_]]]] := (
     ConstructType[Keys[parameters], {key...}]
@@ -128,34 +130,39 @@ ConstructType[parameters_Association, pattern:Association[(Verbatim[Repeated]|Ve
             }]
         )
     }]
-);
+)
 
 
 (* ::Section:: *)
 (*TypeCheck*)
 
 
-TypeCheck[v_?MissingQ, _] := v;
-TypeCheck[_, p_?MissingQ] := p;
-TypeCheck[val_, pat_] := If[MatchQ[val, pat], val, Missing["PatternMismatch", {val, pat}]];
+TypeCheckOff[] := (ClearAll[TypeCheck]; TypeCheck[v_, ___] := v)
+TypeCheckOn[] := (
+    ClearAll[TypeCheck];
+    TypeCheck[v_?MissingQ, _] := v;
+    TypeCheck[_, p_?MissingQ] := p;
+    TypeCheck[val_, pat_] := If[MatchQ[val, pat], val, Missing["PatternMismatch", {val, pat}]];
+)
+TypeCheckOn[]
 
 
 (* ::Section:: *)
 (*ReplaceKey*)
 
 
-ReplaceKey[_, {} -> value_] := value;
-ReplaceKey[rule_Rule][obj_] := ReplaceKey[obj, rule];
+ReplaceKey[obj_, {} -> _] := obj
+ReplaceKey[rule:(_Rule|_RuleDelayed)][obj_] := ReplaceKey[obj, rule]
 
 ReplaceKey[list_List, key_Integer -> value_] :=
-	ReplaceKey[list, {key} -> value];
+	ReplaceKey[list, {key} -> value]
 ReplaceKey[list_List, {key_Integer, keys___} -> value_] := 
-	ReplacePart[list, key -> ReplaceKey[Extract[key][list], {keys} -> value]];
+	ReplacePart[list, key -> ReplaceKey[Extract[key][list], {keys} -> value]]
 	
-ReplaceKey[assoc_Association, key_ -> value_] :=
-	ReplaceKey[assoc, {key} -> value];
-ReplaceKey[assoc_Association, {key_, keys___} -> value_] := 
-	Append[assoc, key -> ReplaceKey[assoc[key], {keys} -> value]];
+ReplaceKey[assoc_Association, (rulehd:(Rule|RuleDelayed))[((key:Except[_List])|{key_}), value_]] :=
+	Append[assoc, rulehd[key, value]]
+ReplaceKey[assoc_Association, (rulehd:(Rule|RuleDelayed))[{key_, keys__}, value_]] := 
+	Append[assoc, key -> ReplaceKey[assoc[key], rulehd[{keys}, value]]]
 
 
 (* ::Section:: *)
@@ -180,7 +187,7 @@ AssociationSameQ[assoc1_Association, assoc2_Association] := Module[
 		assoc2 /@ keylist
 	}] // ContainsOnly[{True}]
 	
-];
+]
 
 
 (* ::Section:: *)
@@ -197,10 +204,10 @@ TypeUsage[typename_Symbol, usage_String] := (
         " ",
         usage
     }]
-);
+)
 
 
 End[]
 
 
-EndPackage[];
+EndPackage[]

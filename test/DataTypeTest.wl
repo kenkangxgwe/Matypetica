@@ -1,16 +1,16 @@
 (* ::Package:: *)
 
-BeginPackage["DataTypeTest`"];
-Construct[ClearAll, Context[] <> "*"];
+BeginPackage["DataTypeTest`"]
+Construct[ClearAll, Context[] <> "*"]
 
 
-Begin["`Private`"];
+Begin["`Private`"]
 
 
-Construct[ClearAll, Context[] <> "*"];
-TestedContext = "DataType`";
+Construct[ClearAll, Context[] <> "*"]
+TestedContext = "DataType`"
 (*Tests::usage = StringTemplate["Tests for `` context."][TestedContext];*)
-Needs[TestedContext];
+Needs[TestedContext]
 
 
 Tests = {
@@ -53,6 +53,14 @@ VerificationTest[
 	stu1["sex"],
 	Missing["PatternMismatch", {"Man", "Male"|"Female"}],
 	TestID -> "Getter Type Check"
+],
+
+VerificationTest[
+    TypeCheckOff[];
+	stu1 = Student[<|"id" -> 1, "name" -> "John Doe", "sex" -> "Man"|>];
+	With[{res = stu1["sex"]}, TypeCheckOn[]; res],
+	"Man",
+	TestID -> "Getter Type Check Off"
 ],
 
 VerificationTest[
@@ -117,7 +125,8 @@ VerificationTest[
         "rangeLength" -> 0,
         "text" -> "\r\n"
     |>]},
-    TestID -> "Nested Construct Constructor 1"
+    TestID -> "Nested Construct Constructor 1",
+	SameTest -> (And@@MapThread[SameQ, {#1, #2}]&)
 ],
 
 VerificationTest[
@@ -136,9 +145,10 @@ VerificationTest[
 VerificationTest[
 	stu1 = Student[<|"id" -> 1, "name" -> "John Doe", "sex" -> "Male", "courses"-> <|1-> "ECON101", 2->"COMP102", 3->"PHYS201"|>|>];
 	stu1 = ReplaceKey[stu1, {"courses", 2}->"COMP202"];
-	ContainsExactly[Normal @ stu1["courses"], Normal @ <|1-> "ECON101", 2->"COMP202", 3->"PHYS201"|>],
-	True,
-	TestID -> "Replace Association"
+	stu1["courses"],
+	<|1-> "ECON101", 2->"COMP202", 3->"PHYS201"|>,
+	TestID -> "Replace Association",
+	SameTest -> AssociationSameQ
 ],
 
 VerificationTest[
@@ -158,8 +168,18 @@ VerificationTest[
 	);
 	class1 = ReplaceKey[class1, "students"-> students];
 	class1["students"]["ken"]["courses"],
-	<|1 -> "ECON101", 2 ->"COMP102", 3 ->"PHYS201"|>,
+	<|1 -> "ECON101", 2 -> "COMP102", 3 -> "PHYS201"|>,
 	TestID -> "Association of DataType"
+],
+
+VerificationTest[
+	DeclareType[Class, <|"id" -> _Integer, "students" -> _Association|>];
+	class1 = Class[<|"id"->1, "students"-> <||>|>];
+    ken = Student[<|"id" -> 1, "name" -> "ken", "sex" -> "Male", "courses"-> <|1-> "ECON101", 2->"COMP102", 3->"PHYS201"|>|>];
+	class1 = ReplaceKey[class1, {"students", "ken"} :> ken];
+	class1["students"]["ken"]["courses"],
+	<|1 -> "ECON101", 2 -> "COMP102", 3 -> "PHYS201"|>,
+	TestID -> "Delayed Value"
 ],
 
 VerificationTest[
@@ -184,12 +204,12 @@ VerificationTest[
     TestID -> "Type usage 2"
 ]
 
-};
+}
 
-Sow[#, "WolframLanguageServer`Test`DataTypeTest`"]& /@ Tests;
-
-
-End[];
+Sow[#, "WolframLanguageServer`Test`DataTypeTest`"]& /@ Tests
 
 
-EndPackage[];
+End[]
+
+
+EndPackage[]
