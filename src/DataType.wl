@@ -18,6 +18,9 @@ KeyPatterns::usage = "KeyPatterns[typename] returns the key-pattern pair of the 
 ReplaceKey::usage = "ReplaceKey[object, key -> value] assigns the value to key in given object.
 ReplaceKey[object, {key1, key2} -> value] assigns the value to object[key1][key2].
 Replacekey[replaceRule_Rule] is an operator that can be applied to an object."
+ReplaceKeyBy::usage = "ReplaceKeyBy[object, key -> func] replaces the value at object[key] by applying a function on it.
+ReplaceKeyBy[object, {key1, key2} -> func] replaces the value at object[key1][key2].
+ReplacekeyBy[replaceRule_Rule] is an operator that can be applied to an object."
 TypeCheckOn::usage = "TypeCheckOn[] turns on type checking."
 TypeCheckOff::usage = "TypeCheckOff[] turns off type checking."
 
@@ -54,6 +57,10 @@ DeclareType[typename_Symbol, typekey:<|(_String -> _)...|>] := Module[
 	(* ReplaceKey *)
 	ReplaceKey[typename[typedict_Association], rule:((Rule|RuleDelayed)[(_String|{_String, ___}), _])] :=
 		typename[ReplaceKey[typedict, rule]];
+
+    (* ReplaceKeyBy*)
+	ReplaceKeyBy[typename[typedict_Association], rule:((Rule|RuleDelayed)[(_String|{_String, ___}), _])] :=
+		typename[ReplaceKeyBy[typedict, rule]];
 	
 	(* SameQ *)
 	typename /: SameQ[typename[typedict1_Association], typename[typedict2_Association]] := (
@@ -154,15 +161,33 @@ TypeCheckOn[]
 ReplaceKey[obj_, {} -> _] := obj
 ReplaceKey[rule:(_Rule|_RuleDelayed)][obj_] := ReplaceKey[obj, rule]
 
-ReplaceKey[list_List, key_Integer -> value_] :=
-	ReplaceKey[list, {key} -> value]
-ReplaceKey[list_List, {key_Integer, keys___} -> value_] := 
+ReplaceKey[list_List, key_Integer|{key_Integer} -> value_] :=
+	ReplacePart[list, key -> value]
+ReplaceKey[list_List, {key_Integer, keys__} -> value_] := 
 	ReplacePart[list, key -> ReplaceKey[Extract[key][list], {keys} -> value]]
 	
 ReplaceKey[assoc_Association, (rulehd:(Rule|RuleDelayed))[((key:Except[_List])|{key_}), value_]] :=
 	Append[assoc, rulehd[key, value]]
 ReplaceKey[assoc_Association, (rulehd:(Rule|RuleDelayed))[{key_, keys__}, value_]] := 
 	Append[assoc, key -> ReplaceKey[assoc[key], rulehd[{keys}, value]]]
+
+
+(* ::Section:: *)
+(*ReplaceKeyBy*)
+
+
+ReplaceKeyBy[obj_, {} -> _] := obj
+ReplaceKeyBy[rule:(_Rule|_RuleDelayed)][obj_] := ReplaceKeyBy[obj, rule]
+
+ReplaceKeyBy[list_List, key_Integer|{key_Integer} -> func_] :=
+	ReplacePart[list, key -> func[Part[list, key]]]
+ReplaceKeyBy[list_List, {key_Integer, keys__} -> func_] := 
+	ReplacePart[list, key -> ReplaceKeyBy[Extract[key][list], {keys} -> func]]
+	
+ReplaceKeyBy[assoc_Association, (rulehd:(Rule|RuleDelayed))[((key:Except[_List])|{key_}), func_]] :=
+	Append[assoc, rulehd[key, func[assoc[key]]]]
+ReplaceKeyBy[assoc_Association, (rulehd:(Rule|RuleDelayed))[{key_, keys__}, func_]] := 
+	Append[assoc, key -> ReplaceKeyBy[assoc[key], rulehd[{keys}, func]]]
 
 
 (* ::Section:: *)

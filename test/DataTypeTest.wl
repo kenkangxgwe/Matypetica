@@ -159,6 +159,29 @@ VerificationTest[
 ],
 
 VerificationTest[
+	stu1 = Student[<|"id" -> 1, "name" -> "John Doe", "sex" -> "Male", "courses"->{"ECON101","COMP102","PHYS201"}|>];
+	ReplaceKeyBy[stu1, {"courses", 2}->("COMP202"&)],
+	Student[<|"id" -> 1, "name" -> "John Doe", "sex" -> "Male","courses"->{"ECON101","COMP202","PHYS201"}|>],
+	TestID -> "ReplaceKeyBy List"
+],
+
+VerificationTest[
+	stu1 = Student[<|"id" -> 1, "name" -> "John Doe", "sex" -> "Male", "courses"-> <|1-> "ECON101", 2->"COMP102", 3->"PHYS201"|>|>];
+	stu1 = ReplaceKeyBy[stu1, {"courses", 2}->("COMP202"&)];
+	stu1["courses"],
+	<|1-> "ECON101", 2->"COMP202", 3->"PHYS201"|>,
+	TestID -> "Replace Association",
+	SameTest -> AssociationSameQ
+],
+
+VerificationTest[
+	stu1 = Student[<|"id" -> 1, "name" -> "John Doe", "sex" -> "Male", "courses"-> <|1-> "ECON101", 2->"COMP102", 3->"PHYS201"|>|>];
+	stu1 // ReplaceKeyBy[{"courses", 2}->("COMP202"&)] // ReplaceKey["name" -> ("Long"&)],
+	Student[<|"id" -> 1, "name" -> "Long", "sex" -> "Male", "courses"-> <|1-> "ECON101", 2->"COMP202", 3->"PHYS201"|>|>],
+	TestID -> "Curried ReplaceKey"
+],
+
+VerificationTest[
 	DeclareType[Class, <|"id" -> _Integer, "students" -> _Association|>];
 	class1 = Class[<|"id"->1, "students"-> <||>|>];
 	students = class1["students"];
@@ -176,7 +199,7 @@ VerificationTest[
 	DeclareType[Class, <|"id" -> _Integer, "students" -> _Association|>];
 	class1 = Class[<|"id"->1, "students"-> <||>|>];
     ken = Student[<|"id" -> 1, "name" -> "ken", "sex" -> "Male", "courses"-> <|1-> "ECON101", 2->"COMP102", 3->"PHYS201"|>|>];
-	class1 = ReplaceKey[class1, {"students", "ken"} :> ken];
+	class1 = ReplaceKeyBy[class1, {"students", "ken"} :> (ken&)];
 	class1["students"]["ken"]["courses"],
 	<|1 -> "ECON101", 2 -> "COMP102", 3 -> "PHYS201"|>,
 	TestID -> "Delayed Value"
